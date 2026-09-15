@@ -1,0 +1,144 @@
+// Assignment 6 - MongoDB Shell (mongosh) Solutions
+// Run these in mongosh after: use assignment6
+
+// ---------------------------------------------------------------------------
+// 1. Create an explicit collection "books" with a validation rule to ensure
+//    each document has a non-empty "title" field.
+// ---------------------------------------------------------------------------
+db.createCollection("books", {
+  validator: {
+    $jsonSchema: {
+      bsonType: "object",
+      required: ["title"],
+      properties: {
+        title: {
+          bsonType: "string",
+          minLength: 1,
+          description: "title must be a non-empty string and is required"
+        }
+      }
+    }
+  },
+  validationLevel: "strict",
+  validationAction: "error"
+})
+
+// ---------------------------------------------------------------------------
+// 2. Create an implicit collection "authors" by inserting data directly.
+// ---------------------------------------------------------------------------
+db.authors.insertOne({ name: "George Orwell", nationality: "British" })
+
+// ---------------------------------------------------------------------------
+// 3. Create a capped collection "logs" with a size limit of 1MB.
+// ---------------------------------------------------------------------------
+db.createCollection("logs", { capped: true, size: 1048576 })
+
+// ---------------------------------------------------------------------------
+// 4. Create an index on the books collection for the title field.
+// ---------------------------------------------------------------------------
+db.books.createIndex({ title: 1 })
+
+// ---------------------------------------------------------------------------
+// 5. Insert one document into the books collection.
+// ---------------------------------------------------------------------------
+db.books.insertOne({
+  title: "Future",
+  author: "John Doe",
+  year: 2019,
+  genres: ["Science Fiction"]
+})
+
+// ---------------------------------------------------------------------------
+// 6. Insert multiple documents into the books collection (at least three).
+// ---------------------------------------------------------------------------
+db.books.insertMany([
+  { title: "Brave New World", author: "Aldous Huxley", year: 1932, genres: ["Science Fiction", "Dystopia"] },
+  { title: "1984", author: "George Orwell", year: 1949, genres: ["Science Fiction", "Dystopia"] },
+  { title: "The Shining", author: "Stephen King", year: 1977, genres: ["Horror"] },
+  { title: "The Old Man and the Sea", author: "Ernest Hemingway", year: 1952, genres: ["Fiction"] }
+])
+
+// ---------------------------------------------------------------------------
+// 7. Insert a new log into the logs collection.
+// ---------------------------------------------------------------------------
+db.logs.insertOne({ book: "Future", action: "created", createdAt: new Date() })
+
+// ---------------------------------------------------------------------------
+// 8. Update the book with title "Future" -> change the year to 2022.
+// ---------------------------------------------------------------------------
+db.books.updateOne({ title: "Future" }, { $set: { year: 2022 } })
+
+// ---------------------------------------------------------------------------
+// 9. Find a Book with title "Brave New World".
+// ---------------------------------------------------------------------------
+db.books.find({ title: "Brave New World" })
+
+// ---------------------------------------------------------------------------
+// 10. Find all books published between 1990 and 2010.
+// ---------------------------------------------------------------------------
+db.books.find({ year: { $gte: 1990, $lte: 2010 } })
+
+// ---------------------------------------------------------------------------
+// 11. Find books where the genre includes "Science Fiction".
+// ---------------------------------------------------------------------------
+db.books.find({ genres: "Science Fiction" })
+
+// ---------------------------------------------------------------------------
+// 12. Skip the first two books, limit to the next three, sorted by year desc.
+// ---------------------------------------------------------------------------
+db.books.find().sort({ year: -1 }).skip(2).limit(3)
+
+// ---------------------------------------------------------------------------
+// 13. Find books where the year field is stored as an integer.
+// ---------------------------------------------------------------------------
+db.books.find({ year: { $type: "int" } })
+
+// ---------------------------------------------------------------------------
+// 14. Find all books where the genres field does NOT include
+//     any of the genres "Horror" or "Science Fiction".
+// ---------------------------------------------------------------------------
+db.books.find({ genres: { $nin: ["Horror", "Science Fiction"] } })
+
+// ---------------------------------------------------------------------------
+// 15. Delete all books published before 2000.
+// ---------------------------------------------------------------------------
+db.books.deleteMany({ year: { $lt: 2000 } })
+
+// ---------------------------------------------------------------------------
+// 16. Using aggregation, filter books published after 2000 and sort them
+//     by year descending.
+// ---------------------------------------------------------------------------
+db.books.aggregate([
+  { $match: { year: { $gt: 2000 } } },
+  { $sort: { year: -1 } }
+])
+
+// ---------------------------------------------------------------------------
+// 17. Using aggregation, find all books published after the year 2000.
+//     For each matching book, show only the title, author, and year fields.
+// ---------------------------------------------------------------------------
+db.books.aggregate([
+  { $match: { year: { $gt: 2000 } } },
+  { $project: { _id: 0, title: 1, author: 1, year: 1 } }
+])
+
+// ---------------------------------------------------------------------------
+// 18. Using aggregation, break an array of genres into separate documents.
+// ---------------------------------------------------------------------------
+db.books.aggregate([
+  { $unwind: "$genres" }
+])
+
+// ---------------------------------------------------------------------------
+// 19. Using aggregation, join the books collection with the logs collection.
+// ---------------------------------------------------------------------------
+db.books.aggregate([
+  {
+    $lookup: {
+      from: "logs",
+      localField: "title",
+      foreignField: "book",
+      as: "logs"
+    }
+  }
+])
